@@ -32,7 +32,7 @@ typedef struct  WAV_HEADER
 
 // Function prototypes
 int getFileSize(FILE* inFile);
-vector <int16_t> _dataBytes;
+vector <uint16_t> _dataBytes;
 int main(int argc, char* argv[])
 {
     wav_hdr wavHeader;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
         uint16_t bytesPerSample = wavHeader.bitsPerSample / 8;      //Number     of bytes per sample
         uint64_t numSamples = wavHeader.ChunkSize / bytesPerSample; //How many samples are in the wav file?
         static const uint16_t BUFFER_SIZE = 4096;
-        int16_t* buffer = new int16_t[BUFFER_SIZE];
+        uint16_t* buffer = new uint16_t[BUFFER_SIZE];
 
         while ((bytesRead = fread(buffer, sizeof buffer[0], BUFFER_SIZE / (sizeof buffer[0]), wavFile)) > 0)
         {
