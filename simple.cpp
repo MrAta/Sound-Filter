@@ -3,6 +3,12 @@
 #include <fstream>
 #include <cstdint>
 #include <vector>
+//#include <cstdlib.h>
+#include "wavfile.h"
+#include "bp3-7.h"
+#include "bs10-15.h"
+#include "hp7000.h"
+#include "lp8000.h"
 using std::vector;
 using std::cin;
 using std::cout;
@@ -33,31 +39,88 @@ typedef struct  WAV_HEADER
 // Function prototypes
 int getFileSize(FILE* inFile);
 vector <uint16_t> _dataBytes;
+void readInputwavedata(const char*);
+void calculateOutputDataVector(int AL, const double A[], short outData[]);
+void writeOutputFile(short outData[],const char*);
 int main(int argc, char* argv[])
 {
-    wav_hdr wavHeader;
-    int headerSize = sizeof(wav_hdr), filelength = 0;
-
     const char* filePath;
-    string input;
-    if (argc <= 1)
-    {
-        cout << "Input wave file name: ";
-        cin >> input;
-        cin.get();
-        filePath = input.c_str();
-    }
-    else
-    {
-        filePath = argv[1];
-        cout << "Input wave file name: " << filePath << endl;
-    }
+    const char* outFilePath;
+    int filter;
+	filePath = argv[1];
+	outFilePath = argv[2];
+	filter = atoi(argv[3]);
+    cout << "Input wave file name: " << filePath << endl;
+    cout << "Input wave file name: " << outFilePath << endl;
+    cout << "Selected filter: " << filter << endl;
+    cout <<"Reading "<<filePath<<" ..."<<endl;
+    readInputwavedata(filePath);
+    cout <<"Reading "<<filePath<<" done!"<<endl;
+    cout <<"data SizeL: "<<_dataBytes.size()<<endl;    
+    short *_outDataBytes = (short*)malloc(_dataBytes.size()*sizeof(int));
+    cout <<"defined _outDataBytes"<<endl;
+    switch(filter){
+    	case 1:
+    		cout << "Calculating output data vector with Filter: bp3-7" <<endl;
+    		calculateOutputDataVector(AL1,A1,_outDataBytes);
+    		cout << "Calculating output data vector with Filter bp3-7 done!" <<endl;
+    		break;
+    	case 2:
+    		cout << "Calculating output data vector with Filter: bs10-15" <<endl;
+    		calculateOutputDataVector(AL2,A2,_outDataBytes);
+    		cout << "Calculating output data vector with Filter bs10-15 done!" <<endl;
+    		break;
+    	case 3:    		
+    		cout << "Calculating output data vector with Filter: hp7000" <<endl;
+    		calculateOutputDataVector(AL3,A3, _outDataBytes);
+    		cout << "Calculating output data vector with Filter hp7000 done!" <<endl;    		
+    		break;
+    	case 4:
+    		cout << "Calculating output data vector with Filter: lp8000" <<endl;
+    		calculateOutputDataVector(AL4,A4, _outDataBytes);
+    		cout << "Calculating output data vector with Filter lp8000 done!" <<endl;    		
+    		break;
+	}
+	cout<<"Writing to "<<outFilePath<<" ..."<<endl;
+	writeOutputFile(_outDataBytes,outFilePath);
+	cout<<"Writing to "<<outFilePath<<" done!"<<endl;
+    return 0;
+}
 
-    FILE* wavFile = fopen(filePath, "r");
+void writeOutputFile( short outData[],const char* outFilePath){
+
+	FILE * f = wavfile_open(outFilePath);
+	if(!f) {
+		cout<<"couldn't open "<<outFilePath<<" for writing: "<<errno<<endl;
+		return;
+	}
+
+	wavfile_write(f,outData,_dataBytes.size());
+	wavfile_close(f);	
+		
+}
+void calculateOutputDataVector(int AL,const double A[], short outData[]){
+	for(int i=0; (unsigned)i<_dataBytes.size(); i++ )
+	{
+		outData[i] = 0;
+		for(int j=0; j<AL; j++)
+		{			
+			if(i - j >= 0)
+				outData[i] += A[j]*_dataBytes.at(i-j);
+		}
+	}
+	
+			
+}
+void readInputwavedata(const char* filePath){
+	
+	wav_hdr wavHeader;
+    int headerSize = sizeof(wav_hdr), filelength = 0;
+	FILE* wavFile = fopen(filePath, "r");
     if (wavFile == nullptr)
     {
         fprintf(stderr, "Unable to open wave file: %s\n", filePath);
-        return 1;
+        return;
     }
 
     //Read the header
@@ -74,9 +137,9 @@ int main(int argc, char* argv[])
         while ((bytesRead = fread(buffer, sizeof buffer[0], BUFFER_SIZE / (sizeof buffer[0]), wavFile)) > 0)
         {
             /** DO SOMETHING WITH THE WAVE DATA HERE **/
-            for(int i=0; i < BUFFER_SIZE/(sizeof buffer[0]); i++ )
+            for(int i=0; (unsigned)i < BUFFER_SIZE/(sizeof buffer[0]); i++ )
             	_dataBytes.push_back(buffer[i]);
-            cout << "Read " << bytesRead << " bytes." << endl;
+            //cout << "Read " << bytesRead << " bytes." << endl;
         }
         delete [] buffer;
         buffer = nullptr;
@@ -89,6 +152,7 @@ int main(int argc, char* argv[])
         cout << "Data size                  :" << wavHeader.ChunkSize << endl;
 
         // Display the sampling Rate from the header
+        cout << "Number of Samples              :" << numSamples << endl;
         cout << "Sampling Rate              :" << wavHeader.SamplesPerSec << endl;
         cout << "Number of bits used        :" << wavHeader.bitsPerSample << endl;
         cout << "Number of channels         :" << wavHeader.NumOfChan << endl;
@@ -99,13 +163,12 @@ int main(int argc, char* argv[])
 
         cout << "Block align                :" << wavHeader.blockAlign << endl;
         cout << "Data string                :" << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
-    	for(int i=0; i<_dataBytes.size(); i++)
-    		cout<<i<<":"<<_dataBytes.at(i)<<endl;
+//    	for(int i=0; i<_dataBytes.size(); i++)
+//    		cout<<i<<":"<<_dataBytes.at(i)<<endl;
     }
     fclose(wavFile);
-    return 0;
-}
 
+}
 // find the file size
 int getFileSize(FILE* inFile)
 {
