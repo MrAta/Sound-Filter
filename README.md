@@ -1,6 +1,7 @@
 # NRD(Noise Reduction Filter) 
 Implementation of some noise reduction filters both in cpu and gpu
 #compile
-`g++  -Wall -g simple.cpp wavfile.cpp -o simple -std=c++0x`
+##for running on CPU
+`g++  -Wall -g serial.cpp wavfile.cpp -o serial -std=c++0x`
 #usage
-`./simple input.wav output.wav filter_number`
+`./serial input.wav output.wav filter_number`
